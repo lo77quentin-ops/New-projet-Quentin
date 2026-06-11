@@ -1,6 +1,6 @@
 # 🧟 Zombie Survival
 
-Un jeu de survie contre des hordes de zombies développé en **JavaScript**, **HTML5 Canvas** et **Flask**.
+Voici un jeu de survie développer par moi en **JavaScript**, **HTML5 Canvas** et **Flask**.
 
 ## 🎮 Jouer au jeu
 
