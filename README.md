@@ -39,6 +39,6 @@ Voici un jeu de survie développer par moi en **JavaScript**, **HTML5 Canvas** e
 
 ## Auteur
 
-Quentin
+Quentin Lo Bac Pro CIEL - Recherche d'alternance BTS SIO SISR ou BTS CIEL
 
 Projet personnel réalisé pour apprendre le développement web, JavaScript et le déploiement d'applications avec GitHub et Render.
