@@ -1,10 +1,27 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const playerImg = new Image();
+playerImg.src = "/static/player.png";
+
+const zombieImg = new Image();
+zombieImg.src = "/static/zombie.png";
+
+const bossImg = new Image();
+bossImg.src = "/static/boss.png";
+const backgroundImg = new Image();
+backgroundImg.src = "/static/map.png";
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const keys = {};
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  radius: 40,
+  speed: 7,
+  hp: 100,
+};
 
 document.addEventListener("keydown", (e) => {
   keys[e.key.toLowerCase()] = true;
@@ -23,14 +40,6 @@ canvas.addEventListener("mousemove", (e) => {
   mouse.x = e.clientX;
   mouse.y = e.clientY;
 });
-
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  radius: 20,
-  speed: 7,
-  hp: 100,
-};
 
 const bullets = [];
 const zombies = [];
@@ -67,7 +76,7 @@ canvas.addEventListener("click", () => {
     y: player.y,
     dx: Math.cos(angle) * 12,
     dy: Math.sin(angle) * 12,
-    radius: 5,
+    radius: 10,
   });
 });
 
@@ -280,8 +289,9 @@ function update() {
 }
 
 function draw() {
-  ctx.fillStyle = "#2f8f2f";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
   coins.forEach((coin) => {
     ctx.fillStyle = "gold";
@@ -292,41 +302,49 @@ function draw() {
   });
 
   bullets.forEach((bullet) => {
-    ctx.fillStyle = "yellow";
+    ctx.fillStyle = "#ff2222";
+    ctx.shadowColor = "red";
+    ctx.shadowBlur = 15;
 
     ctx.beginPath();
     ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.shadowBlur = 0;
   });
 
   zombies.forEach((zombie) => {
-    ctx.fillStyle = "green";
-
-    ctx.beginPath();
-    ctx.arc(zombie.x, zombie.y, zombie.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.drawImage(
+      zombieImg,
+      zombie.x - zombie.radius,
+      zombie.y - zombie.radius,
+      zombie.radius * 2,
+      zombie.radius * 2,
+    );
   });
 
   bosses.forEach((boss) => {
-    ctx.fillStyle = "#ff00ff";
-
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText(boss.hp, boss.x - 8, boss.y + 5);
+    ctx.drawImage(
+      bossImg,
+      boss.x - boss.radius,
+      boss.y - boss.radius,
+      boss.radius * 2,
+      boss.radius * 2,
+    );
   });
 
   // VISEUR
-  ctx.strokeStyle = "yellow";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#ff0000";
+  ctx.lineWidth = 3; // <-- AJOUTE ÇA
+  ctx.shadowColor = "#ff0000";
+  ctx.shadowBlur = 15;
 
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
   ctx.lineTo(mouse.x, mouse.y);
   ctx.stroke();
+
+  ctx.shadowBlur = 0;
 
   // LASER
   if (laserActive > 0) {
@@ -337,14 +355,19 @@ function draw() {
     ctx.moveTo(player.x, player.y);
     ctx.lineTo(mouse.x, mouse.y);
     ctx.stroke();
+
+    ctx.lineWidth = 3; // remise à la normale
   }
 
   // JOUEUR
-  ctx.fillStyle = "blue";
 
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.drawImage(
+    playerImg,
+    player.x - player.radius,
+    player.y - player.radius,
+    player.radius * 2,
+    player.radius * 2,
+  );
 
   // UI
   ctx.fillStyle = "white";
@@ -357,7 +380,7 @@ function draw() {
   ctx.fillText("Munitions : " + ammo, 20, 200);
 
   ctx.fillText(
-    "Laser : " +
+    "Laser [E] : " +
       (laserCooldown <= 0 ? "PRET" : Math.ceil(laserCooldown / 60) + "s"),
     20,
     240,
