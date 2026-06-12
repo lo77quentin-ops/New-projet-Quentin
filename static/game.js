@@ -11,6 +11,12 @@ bossImg.src = "/static/boss.png";
 const backgroundImg = new Image();
 backgroundImg.src = "/static/map.png";
 
+const coinImg = new Image();
+coinImg.src = "/static/coin.png";
+
+const droneImg = new Image();
+droneImg.src = "/static/drone.png";
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -42,6 +48,7 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 const bullets = [];
+const droneBullets = [];
 const zombies = [];
 const bosses = [];
 const coins = [];
@@ -58,6 +65,8 @@ let laserCooldown = 0;
 let laserActive = 0;
 
 let gameOver = false;
+let drone = null;
+let droneCooldown = 0;
 
 canvas.addEventListener("click", () => {
   if (gameOver) {
@@ -115,8 +124,9 @@ function spawnZombie() {
   zombies.push({
     x: pos.x,
     y: pos.y,
-    radius: 18,
+    radius: 20,
     speed: 1.2,
+    hp: 1,
   });
 }
 
@@ -136,12 +146,13 @@ function spawnCoin() {
   coins.push({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
-    radius: 10,
+    radius: 25,
+    rotation: 0,
   });
 }
 
 setInterval(spawnZombie, 1000);
-setInterval(spawnCoin, 3000);
+setInterval(spawnCoin, 2500);
 setInterval(spawnBoss, 11000);
 
 function update() {
@@ -153,7 +164,7 @@ function update() {
   if (laserCooldown > 0) laserCooldown--;
   if (laserActive > 0) laserActive--;
 
-  if (reloadTimer >= 70) {
+  if (reloadTimer >= 60) {
     reloadTimer = 0;
 
     if (ammo < maxAmmo) {
@@ -165,6 +176,87 @@ function update() {
   if (keys["s"]) player.y += player.speed;
   if (keys["q"]) player.x -= player.speed;
   if (keys["d"]) player.x += player.speed;
+
+  if (keys["f"] && !drone && coinCount >= 20) {
+    coinCount -= 20;
+
+    drone = {
+      x: player.x + 60,
+      y: player.y - 80,
+      hp: 20,
+      maxHp: 20,
+      damage: 1,
+      shootTimer: 0,
+
+      targetX: player.x,
+      targetY: player.y,
+      moveTimer: 0,
+    };
+  }
+  if (drone) {
+    drone.moveTimer++;
+
+    if (drone.moveTimer >= 180) {
+      // 3 secondes
+
+      drone.moveTimer = 0;
+
+      drone.targetX = player.x + (Math.random() * 400 - 200);
+      drone.targetY = player.y + (Math.random() * 400 - 200);
+    }
+
+    const angle = Math.atan2(drone.targetY - drone.y, drone.targetX - drone.x);
+
+    drone.x += Math.cos(angle) * 1.5;
+    drone.y += Math.sin(angle) * 1.5;
+  }
+
+  if (drone) {
+    drone.shootTimer++;
+
+    if (drone.shootTimer >= 120) {
+      console.log("DRONE FIRE");
+      // 2 secondes (60 FPS)
+      drone.shootTimer = 0;
+
+      let target = null;
+      let minDist = Infinity;
+
+      zombies.forEach((zombie) => {
+        const dist = Math.hypot(zombie.x - drone.x, zombie.y - drone.y);
+
+        if (dist < minDist) {
+          minDist = dist;
+          target = zombie;
+        }
+      });
+
+      if (target) {
+        const angle = Math.atan2(target.y - drone.y, target.x - drone.x);
+
+        droneBullets.push({
+          x: drone.x,
+          y: drone.y,
+          dx: Math.cos(angle) * 8,
+          dy: Math.sin(angle) * 8,
+          damage: 1,
+        });
+      }
+
+      if (target) {
+        target.hp -= drone.damage;
+
+        if (target.hp <= 0) {
+          const index = zombies.indexOf(target);
+
+          if (index > -1) {
+            zombies.splice(index, 1);
+            kills++;
+          }
+        }
+      }
+    }
+  }
 
   // SUPER LASER
   if (keys["e"] && laserCooldown <= 0) {
@@ -208,12 +300,29 @@ function update() {
     bullet.x += bullet.dx;
     bullet.y += bullet.dy;
   });
+  droneBullets.forEach((bullet) => {
+    bullet.x += bullet.dx;
+    bullet.y += bullet.dy;
+  });
 
   zombies.forEach((zombie) => {
     const angle = Math.atan2(player.y - zombie.y, player.x - zombie.x);
 
     zombie.x += Math.cos(angle) * zombie.speed;
     zombie.y += Math.sin(angle) * zombie.speed;
+
+    // ATTAQUE DU DRONE
+    if (drone) {
+      const distDrone = Math.hypot(zombie.x - drone.x, zombie.y - drone.y);
+
+      if (distDrone < zombie.radius + 25) {
+        drone.hp -= 0.05;
+
+        if (drone.hp <= 0) {
+          drone = null;
+        }
+      }
+    }
 
     const dist = Math.hypot(player.x - zombie.x, player.y - zombie.y);
 
@@ -294,11 +403,13 @@ function draw() {
   ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
   coins.forEach((coin) => {
-    ctx.fillStyle = "gold";
-
-    ctx.beginPath();
-    ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.drawImage(
+      coinImg,
+      coin.x - coin.radius,
+      coin.y - coin.radius,
+      coin.radius * 2,
+      coin.radius * 2,
+    );
   });
 
   bullets.forEach((bullet) => {
@@ -331,6 +442,27 @@ function draw() {
       boss.radius * 2,
       boss.radius * 2,
     );
+    // Nom du boss
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.fillText("Alpha", boss.x - 45, boss.y - boss.radius - 35);
+
+    // Barre de vie fond
+    ctx.fillStyle = "black";
+    ctx.fillRect(boss.x - 40, boss.y - boss.radius - 20, 80, 10);
+
+    // Barre de vie rouge
+    ctx.fillStyle = "green";
+    ctx.fillRect(
+      boss.x - 40,
+      boss.y - boss.radius - 20,
+      (boss.hp / 6) * 80,
+      10,
+    );
+
+    // Contour
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(boss.x - 40, boss.y - boss.radius - 20, 80, 10);
   });
 
   // VISEUR
@@ -361,6 +493,17 @@ function draw() {
 
   // JOUEUR
 
+  if (drone) {
+    ctx.drawImage(droneImg, drone.x - 25, drone.y - 25, 50, 50);
+  }
+  if (drone) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(drone.x - 20, drone.y - 40, 40, 6);
+
+    ctx.fillStyle = "lime";
+    ctx.fillRect(drone.x - 20, drone.y - 40, (drone.hp / drone.maxHp) * 40, 6);
+  }
+
   ctx.drawImage(
     playerImg,
     player.x - player.radius,
@@ -368,6 +511,14 @@ function draw() {
     player.radius * 2,
     player.radius * 2,
   );
+
+  droneBullets.forEach((bullet) => {
+    ctx.fillStyle = "cyan";
+
+    ctx.beginPath();
+    ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
   // UI
   ctx.fillStyle = "white";
@@ -378,6 +529,11 @@ function draw() {
   ctx.fillText("Kills : " + kills, 20, 120);
   ctx.fillText("Pièces : " + coinCount, 20, 160);
   ctx.fillText("Munitions : " + ammo, 20, 200);
+  ctx.fillText(
+    drone ? "Drone [F] : ACTIF" : `Drone [F] : ${coinCount}/20 pièces`,
+    20,
+    320,
+  );
 
   ctx.fillText(
     "Laser [E] : " +
@@ -390,7 +546,7 @@ function draw() {
   ctx.strokeRect(20, 270, 200, 20);
 
   ctx.fillStyle = "yellow";
-  ctx.fillRect(20, 270, (reloadTimer / 70) * 200, 20);
+  ctx.fillRect(20, 270, (reloadTimer / 60) * 200, 20);
 
   if (gameOver) {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
