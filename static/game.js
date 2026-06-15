@@ -451,9 +451,25 @@ function draw() {
   });
 
   bullets.forEach((bullet) => {
-    ctx.fillStyle = "#ff2222";
-    ctx.shadowColor = "red";
-    ctx.shadowBlur = 15;
+    const bulletGradient = ctx.createRadialGradient(
+      bullet.x,
+      bullet.y,
+      1,
+      bullet.x,
+      bullet.y,
+      bullet.radius,
+    );
+
+    bulletGradient.addColorStop(0, "#ffffff");
+    bulletGradient.addColorStop(0.2, "#ffff66");
+    bulletGradient.addColorStop(0.5, "#ff8800");
+    bulletGradient.addColorStop(0.8, "#ff00aa");
+    bulletGradient.addColorStop(1, "#5a00ff");
+
+    ctx.fillStyle = bulletGradient;
+
+    ctx.shadowColor = "#ff55aa";
+    ctx.shadowBlur = 20;
 
     ctx.beginPath();
     ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
@@ -554,7 +570,22 @@ function draw() {
 
   // LASER
   if (laserActive > 0) {
-    ctx.strokeStyle = "red";
+    const gradient = ctx.createLinearGradient(
+      player.x,
+      player.y,
+      mouse.x,
+      mouse.y,
+    );
+
+    gradient.addColorStop(0, "#fff6b0");
+    gradient.addColorStop(0.25, "#ffcc00");
+    gradient.addColorStop(0.5, "#ff7b00");
+    gradient.addColorStop(0.75, "#ff00aa");
+    gradient.addColorStop(1, "#5a00ff");
+
+    ctx.strokeStyle = gradient;
+    ctx.shadowColor = "#ff55aa";
+    ctx.shadowBlur = 25;
     ctx.lineWidth = 12;
 
     ctx.beginPath();
@@ -562,7 +593,61 @@ function draw() {
     ctx.lineTo(mouse.x, mouse.y);
     ctx.stroke();
 
-    ctx.lineWidth = 3; // remise à la normale
+    // IMPACT DU LASER
+    ctx.save();
+
+    ctx.shadowColor = "#ff55aa";
+    ctx.shadowBlur = 40;
+
+    const impactGradient = ctx.createRadialGradient(
+      mouse.x,
+      mouse.y,
+      5,
+      mouse.x,
+      mouse.y,
+      40,
+    );
+
+    impactGradient.addColorStop(0, "#ffffff");
+    impactGradient.addColorStop(0.2, "#ffff66");
+    impactGradient.addColorStop(0.5, "#ff8800");
+    impactGradient.addColorStop(0.8, "#ff00aa");
+    impactGradient.addColorStop(1, "transparent");
+
+    ctx.fillStyle = impactGradient;
+
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 30;
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.shadowColor = "#ffcc00";
+      ctx.shadowBlur = 15;
+      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(mouse.x, mouse.y);
+
+      ctx.lineTo(
+        mouse.x + Math.cos(angle) * dist,
+        mouse.y + Math.sin(angle) * dist,
+      );
+
+      ctx.stroke();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(mouse.x, mouse.y);
+      ctx.stroke();
+    }
   }
 
   // JOUEUR
