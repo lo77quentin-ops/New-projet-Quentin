@@ -10,7 +10,7 @@ Voici un jeu de survie développer par moi à l'aide d'une AI en **JavaScript**,
 
 * Déplacement du joueur (ZQSD)
 * Tir à la souris
-* Zombies qui poursuivent le joueur
+* Créature qui poursuivent le joueur
 * Boss avec points de vie
 * Collecte de pièces
 * Système de score
