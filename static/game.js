@@ -28,6 +28,7 @@ const player = {
   speed: 7,
   hp: 100,
 };
+let facingRight = false;
 
 document.addEventListener("keydown", (e) => {
   keys[e.key.toLowerCase()] = true;
@@ -53,6 +54,20 @@ const zombies = [];
 const bosses = [];
 const coins = [];
 
+const particles = [];
+
+function createDeathEffect(x, y) {
+  for (let i = 0; i < 15; i++) {
+    particles.push({
+      x: x,
+      y: y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      life: 30,
+      size: Math.random() * 4 + 2,
+    });
+  }
+}
 let score = 0;
 let kills = 0;
 let coinCount = 0;
@@ -174,8 +189,15 @@ function update() {
 
   if (keys["z"]) player.y -= player.speed;
   if (keys["s"]) player.y += player.speed;
-  if (keys["q"]) player.x -= player.speed;
-  if (keys["d"]) player.x += player.speed;
+  if (keys["q"]) {
+    player.x -= player.speed;
+    facingRight = false;
+  }
+
+  if (keys["d"]) {
+    player.x += player.speed;
+    facingRight = true;
+  }
 
   if (keys["f"] && !drone && coinCount >= 20) {
     coinCount -= 20;
@@ -250,6 +272,8 @@ function update() {
           const index = zombies.indexOf(target);
 
           if (index > -1) {
+            createDeathEffect(target.x, target.y);
+
             zombies.splice(index, 1);
             kills++;
           }
@@ -271,6 +295,8 @@ function update() {
       const diff = Math.abs(angleLaser - angleZombie);
 
       if (diff < 0.15) {
+        createDeathEffect(zombie.x, zombie.y);
+
         zombies.splice(index, 1);
         kills++;
         score += 100;
@@ -357,6 +383,8 @@ function update() {
       const dist = Math.hypot(bullet.x - zombie.x, bullet.y - zombie.y);
 
       if (dist < bullet.radius + zombie.radius) {
+        createDeathEffect(zombie.x, zombie.y);
+
         bullets.splice(bIndex, 1);
         zombies.splice(zIndex, 1);
 
@@ -395,6 +423,16 @@ function update() {
       coins.splice(index, 1);
     }
   });
+  particles.forEach((p, index) => {
+    p.x += p.vx;
+    p.y += p.vy;
+
+    p.life--;
+
+    if (p.life <= 0) {
+      particles.splice(index, 1);
+    }
+  });
 }
 
 function draw() {
@@ -425,23 +463,59 @@ function draw() {
   });
 
   zombies.forEach((zombie) => {
-    ctx.drawImage(
-      zombieImg,
-      zombie.x - zombie.radius,
-      zombie.y - zombie.radius,
-      zombie.radius * 2,
-      zombie.radius * 2,
-    );
+    ctx.save();
+
+    if (player.x > zombie.x) {
+      // joueur à droite
+      ctx.translate(zombie.x, zombie.y);
+      ctx.scale(-1, 1);
+
+      ctx.drawImage(
+        zombieImg,
+        -zombie.radius,
+        -zombie.radius,
+        zombie.radius * 2,
+        zombie.radius * 2,
+      );
+    } else {
+      // joueur à gauche
+      ctx.drawImage(
+        zombieImg,
+        zombie.x - zombie.radius,
+        zombie.y - zombie.radius,
+        zombie.radius * 2,
+        zombie.radius * 2,
+      );
+    }
+
+    ctx.restore();
   });
 
   bosses.forEach((boss) => {
-    ctx.drawImage(
-      bossImg,
-      boss.x - boss.radius,
-      boss.y - boss.radius,
-      boss.radius * 2,
-      boss.radius * 2,
-    );
+    ctx.save();
+
+    if (player.x > boss.x) {
+      ctx.translate(boss.x, boss.y);
+      ctx.scale(-1, 1);
+
+      ctx.drawImage(
+        bossImg,
+        -boss.radius,
+        -boss.radius,
+        boss.radius * 2,
+        boss.radius * 2,
+      );
+    } else {
+      ctx.drawImage(
+        bossImg,
+        boss.x - boss.radius,
+        boss.y - boss.radius,
+        boss.radius * 2,
+        boss.radius * 2,
+      );
+    }
+
+    ctx.restore();
     // Nom du boss
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
@@ -504,13 +578,18 @@ function draw() {
     ctx.fillRect(drone.x - 20, drone.y - 40, (drone.hp / drone.maxHp) * 40, 6);
   }
 
-  ctx.drawImage(
-    playerImg,
-    player.x - player.radius,
-    player.y - player.radius,
-    player.radius * 2,
-    player.radius * 2,
-  );
+  ctx.save();
+
+  if (facingRight) {
+    ctx.translate(player.x, player.y);
+    ctx.scale(-1, 1);
+
+    ctx.drawImage(playerImg, -45, -45, 90, 90);
+  } else {
+    ctx.drawImage(playerImg, player.x - 45, player.y - 45, 90, 90);
+  }
+
+  ctx.restore();
 
   droneBullets.forEach((bullet) => {
     ctx.fillStyle = "cyan";
@@ -547,6 +626,15 @@ function draw() {
 
   ctx.fillStyle = "yellow";
   ctx.fillRect(20, 270, (reloadTimer / 60) * 200, 20);
+
+  // PARTICULES DE MORT
+  particles.forEach((p) => {
+    ctx.fillStyle = `rgba(255,0,0,${p.life / 30})`;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
   if (gameOver) {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
