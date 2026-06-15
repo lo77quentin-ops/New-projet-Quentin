@@ -1,4 +1,4 @@
-# 🧟 Zombie Survival
+# Jeux de survis
 
 Voici un jeu de survie développer par moi à l'aide d'une AI en **JavaScript**, **HTML5 Canvas** et **Flask**.
 
